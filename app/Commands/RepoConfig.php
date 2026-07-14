@@ -70,7 +70,7 @@ class RepoConfig extends BaseCommand
     protected function selectApplication($currentApplicationId): ?Application
     {
         $applications = spin(
-            fn () => $this->client->applications()->withDefaultIncludes()->list()->collect(),
+            fn () => $this->client->applications()->withDefaultIncludes()->list()->collect()->toBase(),
             'Fetching applications...',
         );
 
