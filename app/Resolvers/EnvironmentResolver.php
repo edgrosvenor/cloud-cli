@@ -25,7 +25,9 @@ class EnvironmentResolver extends Resolver
     public function from(?string $idOrName = null): ?Environment
     {
         $identifier = $idOrName ?? $this->localConfig->environmentId();
-        $environment = ($identifier ? $this->fromIdentifier($identifier) : null) ?? $this->fromBranch() ?? $this->fromInput();
+        $environment = $identifier
+            ? $this->fromIdentifier($identifier)
+            : $this->fromBranch() ?? $this->fromInput();
 
         if (! $environment) {
             $this->failAndExit('Unable to resolve environment: '.($idOrName ?? 'Provide a valid environment ID or name.').'. Run `cloud environment:list --json` to see available environments.');
