@@ -1,13 +1,17 @@
 <?php
 
+use App\Client\Connector;
 use App\Client\Resources\Applications\ListApplicationsRequest;
 use App\Client\Resources\Environments\AddEnvironmentVariablesRequest;
 use App\Client\Resources\Environments\GetEnvironmentRequest;
 use App\Client\Resources\Environments\ListEnvironmentsRequest;
 use App\Client\Resources\Meta\GetOrganizationRequest;
 use App\ConfigRepository;
+use App\Dto\Application;
+use App\Exceptions\CommandExitException;
 use App\Git;
 use App\LocalConfig;
+use App\Resolvers\EnvironmentResolver;
 use Laravel\Prompts\Prompt;
 use Saloon\Http\Faking\MockClient;
 use Saloon\Http\Faking\MockResponse;
@@ -66,8 +70,7 @@ it('fails instead of falling back when an explicit environment does not resolve'
         '--action' => 'set',
         '--key' => 'APP_NAME',
         '--value' => 'Cloud',
-    ])->assertFailed()
-        ->expectsOutputToContain('Unable to resolve environment');
+    ])->assertFailed();
 
     MockClient::global()->assertNotSent(AddEnvironmentVariablesRequest::class);
 })->with(['env-missing', 'missing']);
@@ -79,10 +82,25 @@ it('fails instead of falling back when the configured environment does not resol
         '--action' => 'set',
         '--key' => 'APP_NAME',
         '--value' => 'Cloud',
-    ])->assertFailed()
-        ->expectsOutputToContain('Unable to resolve environment');
+    ])->assertFailed();
 
     MockClient::global()->assertNotSent(AddEnvironmentVariablesRequest::class);
+});
+
+it('reports the existing error when an environment does not resolve', function () {
+    Prompt::theme('default');
+
+    $application = Application::createFromResponse([
+        'data' => createApplicationResponse(),
+        'included' => [createEnvironmentResponse()],
+    ]);
+    $resolver = (new EnvironmentResolver(new Connector('test-api-token'), $this->localConfig, true))
+        ->withApplication($application);
+
+    expect(fn () => $resolver->from('env-missing'))
+        ->toThrow(CommandExitException::class);
+
+    Prompt::assertOutputContains('Unable to resolve environment');
 });
 
 it('resolves an environment from the current branch when no identifier is supplied', function () {
