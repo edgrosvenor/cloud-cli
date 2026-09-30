@@ -30,7 +30,11 @@ class EnvironmentResolver extends Resolver
             : $this->fromBranch() ?? $this->fromInput();
 
         if (! $environment) {
-            $this->failAndExit('Unable to resolve environment: '.($idOrName ?? 'Provide a valid environment ID or name.').'. Run `cloud environment:list --json` to see available environments.');
+            $this->failAndExit(match (true) {
+                $idOrName !== null => "Unable to resolve environment: {$idOrName}.",
+                $identifier !== null => "Unable to resolve environment {$identifier} from {$this->localConfig->path()}.",
+                default => 'Unable to resolve environment. Provide a valid environment ID or name.',
+            }.' Run `cloud environment:list --json` to see available environments.');
         }
 
         if (! $this->fetched) {

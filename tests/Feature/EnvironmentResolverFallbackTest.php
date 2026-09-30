@@ -33,6 +33,7 @@ beforeEach(function () {
     $this->localConfig->shouldReceive('get')->with('organization_id')->andReturn(null)->byDefault();
     $this->localConfig->shouldReceive('applicationId')->andReturn(null)->byDefault();
     $this->localConfig->shouldReceive('environmentId')->andReturn(null)->byDefault();
+    $this->localConfig->shouldReceive('path')->andReturn('/project/.cloud/config.json')->byDefault();
     $this->app->instance(LocalConfig::class, $this->localConfig);
 
     $environment = createEnvironmentResponse([
@@ -101,6 +102,24 @@ it('reports the existing error when an environment does not resolve', function (
         ->toThrow(CommandExitException::class);
 
     Prompt::assertOutputContains('Unable to resolve environment');
+});
+
+it('names the config file when the configured environment does not resolve', function () {
+    Prompt::theme('default');
+
+    $this->localConfig->shouldReceive('environmentId')->andReturn('env-missing');
+
+    $application = Application::createFromResponse([
+        'data' => createApplicationResponse(),
+        'included' => [createEnvironmentResponse()],
+    ]);
+    $resolver = (new EnvironmentResolver(new Connector('test-api-token'), $this->localConfig, true))
+        ->withApplication($application);
+
+    expect(fn () => $resolver->from())
+        ->toThrow(CommandExitException::class);
+
+    Prompt::assertOutputContains('Unable to resolve environment env-missing from /project/.cloud/config.json.');
 });
 
 it('resolves an environment from the current branch when no identifier is supplied', function () {
